@@ -70,7 +70,7 @@ def generate_destination(
     logging.debug("Files with the same name.")
     for file in unique_name:
         dst = destination.joinpath(file.name)
-        logging.debug("SRC: %s. DST: %s", file, dst)
+        logging.debug("File: %s. DST: %s", file, dst)
         src_and_dst.append((file, dst))
 
     # Duplicate files get systematically numbered names

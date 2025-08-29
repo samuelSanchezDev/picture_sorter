@@ -25,7 +25,7 @@ def recursive_list(
 
     logging.debug("Listing directory '%s'.", directory)
     for path in directory.rglob("*"):
-        logging.debug("File found '%s'.", path)
+        logging.debug("Listed '%s'.", path)
         if path.is_file() and filter_f(path):
             logging.debug("File accepted.")
             filtered_files.append(path)
@@ -47,12 +47,12 @@ def group_by_hash(
     logging.debug("Group files by hash (%s).", algorithm)
     for file in files:
         with file.open("rb") as f:
-            digest = hashlib.file_digest(f, algorithm).digest()
+            digest = hashlib.file_digest(f, algorithm)
+            logging.debug("File:'%s'. Hash:'%s'.", file, digest.hexdigest())
 
-        logging.debug("File:'%s'. Hash:'%s'.", file, digest)
-        hash_groups.setdefault(digest, []).append(file)
+        hash_groups.setdefault(digest.digest(), []).append(file)
 
-    logging.debug("Found %d unique files.", hash_groups.values())
+    logging.debug("Found %d unique files.", len(hash_groups.values()))
     return [tuple(group) for group in hash_groups.values()]
 
 
@@ -67,7 +67,7 @@ def copy_files(
                         Destination can be relative if root_dir is provided.
     :param root_dir: Optional base directory prepended to all destinations.
     """
-    logging.debug("Copying %d directories.", len(src_and_dst))
+    logging.debug("Copying %d files.", len(src_and_dst))
     for src, dst in src_and_dst:
         logging.debug("SRC: %s. DST: %s", src, dst)
         dst = (
