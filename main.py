@@ -10,9 +10,7 @@ from typing import Any
 
 from picture_sorter.dates import parse_date, NoDateFound
 from picture_sorter.files import (
-    compress_directory,
     copy_files,
-    delete_directory,
     group_by_hash,
     recursive_list,
 )
@@ -39,16 +37,13 @@ DEPTH2STRFTIME = {
 DEPTH2INT = {"none": 0, "year": 1, "month": 2, "day": 3}
 
 NO_DATE = "no-date"
-TMP_FOLDER = "tmp"
 
 
 def save_media(
     base_dirs: list[pathlib.Path],
     out_dir: pathlib.Path,
     depth: int,
-    compress: str | None,
 ) -> None:
-
     def media_ext(filename: str | pathlib.Path) -> bool:
         _, ext = os.path.splitext(filename)
         return ext.upper() in MEDIA_EXTENSIONS
@@ -63,6 +58,7 @@ def save_media(
     logging.info("Total found: %d media files.", len(all_media_files))
 
     # Keep one copy from duplicate files.
+    logging.info("Searching unique files.")
     unique_media = [f[0] for f in group_by_hash(all_media_files)]
     logging.info("Unique files found: %d media files.", len(unique_media))
 
@@ -71,7 +67,7 @@ def save_media(
     # No date classification
     if depth == 0:
         logging.info("Generating destination with-out date.")
-        src_and_dst = generate_destination(unique_media)
+        src_and_dst = generate_destination(unique_media, out_dir)
 
     # Date classification
     else:
@@ -92,24 +88,12 @@ def save_media(
 
         logging.info("Generating destination from date.")
         for date, files in destination.items():
-            src_and_dst.extend(generate_destination(files, date))
+            dst = out_dir.joinpath(date)
+            src_and_dst.extend(generate_destination(files, dst))
 
-    # Copy or compress files
-    if compress is None:
-        logging.info("Copying files to '%s'.", out_dir)
-        copy_files(src_and_dst, out_dir)
-    else:
-        logging.info("Copying files to temporary directory '%s'.", TMP_FOLDER)
-        copy_files(src_and_dst, TMP_FOLDER)
-        logging.info(
-            "Compressing '%s' into '%s.%s'.",
-            TMP_FOLDER,
-            out_dir,
-            compress,
-        )
-        compress_directory(TMP_FOLDER, out_dir, compress)
-        logging.info("Deleting temporary directory")
-        delete_directory(TMP_FOLDER)
+    # Copy files
+    logging.info("Copying files to '%s'.", out_dir)
+    copy_files(src_and_dst)
 
 
 def main() -> None:
@@ -163,22 +147,6 @@ def main() -> None:
     )
 
     parser.add_argument(
-        "--compress",
-        nargs="?",
-        const="zip",
-        default=None,
-        type=str,
-        choices=("zip", "tar", "gztar", "bztar", "xztar"),
-        help=(
-            "Optional: compress the output directory into an archive. "
-            "If used without value, defaults to 'zip'. "
-            "Valid formats: zip, tar, gztar, bztar, xztar."
-        ),
-        metavar="FORMAT",
-        dest="compress",
-    )
-
-    parser.add_argument(
         "--debug",
         dest="debug",
         action="store_true",
@@ -214,7 +182,7 @@ def main() -> None:
 
     depth = DEPTH2INT[args.depth]
 
-    save_media(base_dirs, out_dir, depth, args.compress)
+    save_media(base_dirs, out_dir, depth)
 
 
 if __name__ == "__main__":
